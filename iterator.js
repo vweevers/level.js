@@ -1,6 +1,7 @@
 var util = require('util')
 var AbstractIterator  = require('abstract-leveldown').AbstractIterator
 var ltgt = require('ltgt')
+var fastFuture = require('fast-future')
 
 module.exports = Iterator
 
@@ -10,8 +11,6 @@ function Iterator (db, options) {
   AbstractIterator.call(this, db)
   this._order = options.reverse ? 'DESC': 'ASC'
   this._limit = options.limit
-  this._count = 0
-  this._done  = false
   var lower = ltgt.lowerBound(options)
   var upper = ltgt.upperBound(options)
   try {
@@ -26,7 +25,12 @@ function Iterator (db, options) {
     // IndexedDB throws an error, but we'll just return 0 results.
     this._keyRangeError = true
   }
+
   this.callback = null
+  this.cache    = []
+  this.finished = false
+  this.future = fastFuture()
+  this.createIterator()
 }
 
 util.inherits(Iterator, AbstractIterator)
@@ -34,39 +38,63 @@ util.inherits(Iterator, AbstractIterator)
 Iterator.prototype.createIterator = function() {
   var self = this
 
-  self.iterator = self.db.iterate(function () {
+  self.transaction = self.db.iterate(function () {
     self.onItem.apply(self, arguments)
   }, {
     keyRange: self._keyRange,
-    autoContinue: false,
+    autoContinue: true,
     order: self._order,
-    onError: function(err) { console.log('horrible error', err) },
+    limit: this._limit && this._limit > 0 ? this._limit : Infinity,
+    onError: function(event) {
+      if (event) {
+        var err = new Error((''+self.transaction.error) || 'Unknown error')
+        if (self.callback) self.callback(err)
+        else if (!self.finished) self._error = err
+        self.callback = null
+      } else {
+        self.finished = true // Called on completion
+      }
+    }
   })
 }
 
-// TODO the limit implementation here just ignores all reads after limit has been reached
-// it should cancel the iterator instead but I don't know how
-Iterator.prototype.onItem = function (value, cursor, cursorTransaction) {
-  if (!cursor && this.callback) {
-    this.callback()
-    this.callback = false
-    return
+Iterator.prototype.onItem = function (value, cursor) {
+  if (cursor && this.cache) this.cache.push(value, cursor.key)
+  else this.finished = true
+
+  if (this.callback) {
+    var cb = this.callback
+    this.callback = null
+    this._next(cb)
   }
-  var shouldCall = true
-
-  if (!!this._limit && this._limit > 0 && this._count++ >= this._limit)
-    shouldCall = false
-
-  if (shouldCall) this.callback(false, cursor.key, cursor.value)
-  if (cursor) cursor['continue']()
 }
 
 Iterator.prototype._next = function (callback) {
-  if (!callback) return new Error('next() requires a callback argument')
-  if (this._keyRangeError) return callback()
-  if (!this._started) {
-    this.createIterator()
-    this._started = true
+  if (this._keyRangeError) return this.end(callback)
+
+  if (this._error) {
+    this.future(callback.bind(null, this._error))
+    this._error = null
+    return
   }
-  this.callback = callback
+
+  if (this.cache && this.cache.length) {
+    var value = this.cache.shift()
+    var key   = this.cache.shift()
+
+    this.future(function () {
+      callback(null, key, value)
+    })
+  } else if (this.finished) {
+    this.future(callback)
+  } else {
+    this.callback = callback
+  }
+}
+
+Iterator.prototype._end = function (callback) {
+  var err = this._error
+  this.finished = true
+  this.cache = this.callback = this._error = null
+  this.future(callback.bind(null, err))
 }
