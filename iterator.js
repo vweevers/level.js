@@ -1,7 +1,9 @@
+// Wish it was a CommonJS ponyfill
+require('setimmediate')
+
 var util = require('util')
 var AbstractIterator  = require('abstract-leveldown').AbstractIterator
 var ltgt = require('ltgt')
-var fastFuture = require('fast-future')
 
 module.exports = Iterator
 
@@ -29,7 +31,6 @@ function Iterator (db, options) {
   this.callback = null
   this.cache    = []
   this.finished = false
-  this.future = fastFuture()
   this.createIterator()
 }
 
@@ -73,7 +74,12 @@ Iterator.prototype._next = function (callback) {
   if (this._keyRangeError) return this.end(callback)
 
   if (this._error) {
-    this.future(callback.bind(null, this._error))
+    var err = this._error
+
+    setImmediate(function () {
+      callback(err)
+    })
+
     this._error = null
     return
   }
@@ -82,11 +88,11 @@ Iterator.prototype._next = function (callback) {
     var value = this.cache.shift()
     var key   = this.cache.shift()
 
-    this.future(function () {
+    setImmediate(function () {
       callback(null, key, value)
     })
   } else if (this.finished) {
-    this.future(callback)
+    setImmediate(callback)
   } else {
     this.callback = callback
   }
@@ -94,7 +100,11 @@ Iterator.prototype._next = function (callback) {
 
 Iterator.prototype._end = function (callback) {
   var err = this._error
+
   this.finished = true
   this.cache = this.callback = this._error = null
-  this.future(callback.bind(null, err))
+
+  setImmediate(function () {
+    callback(err)
+  })
 }
