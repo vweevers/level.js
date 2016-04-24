@@ -9,13 +9,11 @@ var toBuffer = require('./util').toBuffer
 module.exports = Iterator
 
 function Iterator (db, options) {
-  this.callback = null
-  this.cache    = []
-  this.finished = false
-
-  this.options = options
-  this.keyAsBuffer = options.keyAsBuffer
-  this.valueAsBuffer = options.valueAsBuffer
+  this._callback = null
+  this._cache    = []
+  this._finished = false
+  this._keyAsBuffer = options.keyAsBuffer
+  this._valueAsBuffer = options.valueAsBuffer
 
   AbstractIterator.call(this, db)
 
@@ -42,16 +40,16 @@ function Iterator (db, options) {
     }
   }
 
-  if (!this._empty) this.createIterator()
+  if (!this._empty) this._openTransaction()
 }
 
 util.inherits(Iterator, AbstractIterator)
 
-Iterator.prototype.createIterator = function() {
+Iterator.prototype._openTransaction = function() {
   var self = this
 
   self.transaction = self.db.iterate(function () {
-    self.onItem.apply(self, arguments)
+    self._onItem.apply(self, arguments)
   }, {
     keyRange: self._keyRange,
     autoContinue: true,
@@ -59,28 +57,27 @@ Iterator.prototype.createIterator = function() {
     limit: self._limit && self._limit > 0 ? self._limit : Infinity,
     onError: function(event) {
       if (event) {
-        var err = new Error((''+self.transaction.error) || 'Unknown error')
-        var cb = self.callback
+        var err = new Error(''+self.transaction.error)
+        var callback = self._callback
 
-        self.callback = null
+        self._callback = null
 
-        if (cb) cb(err)
-        else if (!self.finished) self._error = err
+        if (callback) callback(err)
+        else if (!self._finished) self._error = err
       } else {
-        self.finished = true // Called on completion
+        self._finished = true // Called on completion
       }
     }
   })
 }
 
-Iterator.prototype.onItem = function (value, cursor) {
-  if (cursor && this.cache) this.cache.push(value, cursor.key)
-  else this.finished = true
+Iterator.prototype._onItem = function (value, cursor) {
+  if (cursor && this._cache) this._cache.push(value, cursor.key)
+  else this._finished = true
 
-  if (this.callback) {
-    var cb = this.callback
-    this.callback = null
-    this._next(cb)
+  if (this._callback) {
+    this._next(this._callback)
+    this._callback = null
   }
 }
 
@@ -95,28 +92,26 @@ Iterator.prototype._next = function (callback) {
     })
 
     this._error = null
-  } else if (this.cache && this.cache.length) {
-    var value = this.cache.shift()
-    var key   = this.cache.shift()
+  } else if (this._cache && this._cache.length) {
+    var value = this._cache.shift()
+    var key   = this._cache.shift()
 
-    if (this.keyAsBuffer) key = toBuffer(key)
-    if (this.valueAsBuffer) value = toBuffer(value)
+    if (this._keyAsBuffer) key = toBuffer(key)
+    if (this._valueAsBuffer) value = toBuffer(value)
 
     setImmediate(function () {
       callback(null, key, value)
     })
-  } else if (this.finished) {
+  } else if (this._finished) {
     setImmediate(callback)
   } else {
-    this.callback = callback
+    this._callback = callback
   }
 }
 
 Iterator.prototype._end = function (callback) {
   var err = this._error
-
-  this.finished = true
-  this.cache = this.callback = this._error = null
+  this._cache = this._callback = this._error = null
 
   setImmediate(function () {
     callback(err)

@@ -1,12 +1,14 @@
+'use strict';
+
 module.exports = Level
 
 var IDB = require('idb-wrapper')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 var util = require('util')
-var Iterator = require('./iterator')
+var isTyped = require('is-typedarray').strict
 var xtend = require('xtend')
 var toBuffer = require('./util').toBuffer
-var isTyped = require('is-typedarray').strict
+var Iterator = require('./iterator')
 
 function Level(location) {
   if (!(this instanceof Level)) return new Level(location)
