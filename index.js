@@ -31,7 +31,7 @@ module.exports = Level
 Level.prototype._open = function(options, callback) {
   var self = this
 
-  var idbOpts = {
+  var defaults = {
     storeName: this.location,
     autoIncrement: false,
     keyPath: null,
@@ -43,9 +43,8 @@ Level.prototype._open = function(options, callback) {
     }
   }
 
-  xtend(idbOpts, options)
-  this.idbOptions = idbOpts
-  this.idb = new IDB(idbOpts)
+  this.idbOptions = xtend(defaults, options)
+  this.idb = new IDB(this.idbOptions)
 }
 
 Level.prototype._get = function (key, options, callback) {
