@@ -1,5 +1,11 @@
 var levelup = require('levelup')
 
+module.exports.all = function(leveljs, tape, testCommon) {
+  module.exports.setUp(leveljs, tape, testCommon)
+  module.exports.custom(leveljs, tape, testCommon)
+  module.exports.tearDown(tape, testCommon)
+}
+
 module.exports.setUp = function (leveldown, test, testCommon) {
   test('setUp common', testCommon.setUp)
   test('setUp db', function (t) {
@@ -8,27 +14,13 @@ module.exports.setUp = function (leveldown, test, testCommon) {
   })
 }
 
-module.exports.all = function(leveljs, tape, testCommon) {
+module.exports.tearDown = function (test, testCommon) {
+  test('tearDown', function (t) {
+    db.close(testCommon.tearDown.bind(null, t))
+  })
+}
 
-  module.exports.setUp(leveljs, tape, testCommon)
-
-  // Note: use { valueEncoding: id } instead
-  // tape('store native JS types with raw = true', function(t) {
-  //   var level = leveljs(testCommon.location())
-  //   level.open(function(err) {
-  //     t.notOk(err, 'no error')
-  //     level.put('key', true, { raw: true },  function (err) {
-  //       t.notOk(err, 'no error')
-  //       level.get('key', { raw: true }, function(err, value) {
-  //         t.notOk(err, 'no error')
-  //         t.ok(typeof value === 'boolean', 'is boolean type')
-  //         t.ok(value, 'is truthy')
-  //         t.end()
-  //       })
-  //     })
-  //   })
-  // })
-
+module.exports.custom = function(leveljs, tape, testCommon) {
   tape('levelup JSON encoding', function (t) {
     var level = levelup(testCommon.location(), { db: leveljs, valueEncoding: 'json' })
 
@@ -46,11 +38,7 @@ module.exports.all = function(leveljs, tape, testCommon) {
           level.get('key', { valueEncoding: 'utf8' }, function(err, value) {
             t.notOk(err, 'no get error')
             t.same(value, JSON.stringify({ a: 2 }), 'is JSON string')
-
-            level.close(function (err) {
-              t.ifError(err, 'no close error')
-              leveljs.destroy(level.db, function (err) { t.end() })
-            })
+            t.end()
           })
         })
       })
@@ -66,11 +54,7 @@ module.exports.all = function(leveljs, tape, testCommon) {
       level.get('key', function(err, value) {
         t.notOk(err, 'no get error')
         t.same(value, { a: 2 }, 'is object')
-
-        level.close(function (err) {
-          t.ifError(err, 'no close error')
-          leveljs.destroy(level.db, function (err) { t.end() })
-        })
+        t.end()
       })
     })
   })
