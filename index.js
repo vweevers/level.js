@@ -4,7 +4,6 @@ var IDB = require('idb-wrapper')
 var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
 var util = require('util')
 var Iterator = require('./iterator')
-var isBuffer = require('isbuffer')
 var xtend = require('xtend')
 var toBuffer = require('./util').toBuffer
 var isTyped = require('is-typedarray').strict

@@ -26,7 +26,6 @@
     "abstract-leveldown": "~2.6.0",
     "idb-wrapper": "^1.5.0",
     "is-typedarray": "~1.0.0",
-    "isbuffer": "~0.0.0",
     "ltgt": "^2.1.2",
     "setimmediate": "~1.0.4",
     "typedarray-to-buffer": "~3.1.2",
