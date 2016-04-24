@@ -14,13 +14,13 @@ var dbidx = 0
       for (var i = 0; i < dbidx; i++) {
         list.push('_leveldown_test_db_' + i)
       }
-      
+
       function destroy() {
         var f = list.pop()
         if (list.length === 0) return callback()
-        leveljs.destroy(f, destroy)
+        leveljs.destroy(f, { wait: 500 }, destroy)
       }
-      
+
       destroy()
     }
 

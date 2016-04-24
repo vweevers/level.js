@@ -125,7 +125,10 @@ Level.prototype._approximateSize = function (start, end, callback) {
   throw err
 }
 
-Level.destroy = function (db, callback) {
+Level.destroy = function (db, options, callback) {
+  if (typeof options === 'function') callback = options, options = {}
+  else if (!options) options = {}
+
   if (typeof db === 'object') {
     var prefix = (db.IDBOptions && db.IDBOptions.storePrefix) || 'IDBWrapper-'
     var dbname = db.location
@@ -137,21 +140,25 @@ Level.destroy = function (db, callback) {
   var request = indexedDB.deleteDatabase(prefix + dbname)
 
   var called = 0
-  var cb = function(err) {
+  var cb = function (err) {
     if (!called++) callback(err)
   }
 
   request.onsuccess = function() {
     cb()
   }
+
   request.onerror = function(err) {
     cb(err)
   }
+
   request.onblocked = function() {
     // Wait a max amount of time
-    setTimeout(function() {
-      if (!called) cb(new Error('Delete request blocked'))
-    }, 500)
+    if (options.wait !== undefined) {
+      setTimeout(function() {
+        if (!called) cb(new Error('Delete request blocked'))
+      }, options.wait)
+    }
   }
 }
 
