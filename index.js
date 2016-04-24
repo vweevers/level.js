@@ -92,29 +92,24 @@ Level.prototype._iterator = function (options) {
   return new Iterator(this.idb, options)
 }
 
-Level.prototype._batch = function (array, options, callback) {
-  var op
-  var i
-  var k
-  var copiedOp
-  var currentOp
-  var modified = Array(array.length)
+Level.prototype._batch = function (ops, options, callback) {
+  if (ops.length === 0) return setImmediate(callback)
 
-  if (array.length === 0) return setTimeout(callback, 0)
+  var copies = Array(ops.length)
 
-  for (i = 0; i < array.length; i++) {
-    currentOp = array[i]
-    modified[i] = copiedOp = { key: this._serializeKey(currentOp.key) }
+  for (var i = 0; i < ops.length; i++) {
+    var op = ops[i]
+    var copy = copies[i] = { key: this._serializeKey(op.key) }
 
-    if (currentOp.type === 'del') {
-      copiedOp.type = 'remove'
+    if (op.type === 'del') {
+      copy.type = 'remove'
     } else {
-      copiedOp.type = 'put'
-      copiedOp.value = this._serializeValue(currentOp.value)
+      copy.type = 'put'
+      copy.value = this._serializeValue(op.value)
     }
   }
 
-  return this.idb.batch(modified, function(){ callback() }, callback)
+  return this.idb.batch(copies, function(){ callback() }, callback)
 }
 
 Level.prototype._close = function (callback) {
