@@ -6,7 +6,7 @@ var util = require('util')
 var Iterator = require('./iterator')
 var isBuffer = require('isbuffer')
 var xtend = require('xtend')
-var toBuffer = require('typedarray-to-buffer')
+var toBuffer = require('./util').toBuffer
 var isTyped = require('is-typedarray').strict
 
 function Level(location) {
@@ -47,11 +47,7 @@ Level.prototype._get = function (key, options, callback) {
       return callback(new Error('NotFound'))
     }
 
-    if (options.asBuffer) {
-      value = isTyped(value) ? toBuffer(value) : Buffer(String(value))
-    }
-
-    return callback(null, value)
+    callback(null, options.asBuffer ? toBuffer(value) : value)
   }, callback)
 }
 
@@ -63,19 +59,32 @@ Level.prototype._put = function (key, value, options, callback) {
   this.idb.put(key, value, function() { callback() }, callback)
 }
 
+// Valid types in IndexedDB Second Edition:
+//
+// - Number, except NaN. Includes Infinity and -Infinity
+// - Date, except invalid (NaN)
+// - String
+// - ArrayBuffer or a view thereof (typed arrays)
+// - Array, except cyclical and empty (e.g. Array(10)). Elements must be valid
+//   types themselves.
 Level.prototype._serializeKey = function (key) {
-  if (this._isBuffer(key)) return key
-  else if (key instanceof ArrayBuffer) return Buffer(key)
-  else if (key instanceof Uint8Array) return key
-  else return String(key)
+  if (typeof key === 'string')
+    return key
+
+  if (typeof key === 'number' || key instanceof Date)
+    return isNaN(key) ? String(key) : key
+
+  if (key instanceof ArrayBuffer || this._isBuffer(key) || isTyped(key))
+    return key
+
+  if (Array.isArray(key))
+    return key
+
+  return String(key)
 }
 
 Level.prototype._serializeValue = function (value) {
-  if (value === null || value === undefined) return ''
-  if (this._isBuffer(value)) return value
-  else if (value instanceof ArrayBuffer) return Buffer(value)
-  else if (value instanceof Uint8Array) return value
-  else return value
+  return value == null ? '' : value
 }
 
 Level.prototype._iterator = function (options) {

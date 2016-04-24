@@ -4,8 +4,7 @@ require('setimmediate')
 var util = require('util')
 var AbstractIterator  = require('abstract-leveldown').AbstractIterator
 var ltgt = require('ltgt')
-var toBuffer = require('typedarray-to-buffer')
-var isTyped = require('is-typedarray').strict
+var toBuffer = require('./util').toBuffer
 
 module.exports = Iterator
 
@@ -100,10 +99,8 @@ Iterator.prototype._next = function (callback) {
     var value = this.cache.shift()
     var key   = this.cache.shift()
 
-    if (this.keyAsBuffer)
-      key = isTyped(key) ? toBuffer(key) : Buffer(String(key))
-    if (this.valueAsBuffer)
-      value = isTyped(value) ? toBuffer(value) : Buffer(String(value))
+    if (this.keyAsBuffer) key = toBuffer(key)
+    if (this.valueAsBuffer) value = toBuffer(value)
 
     setImmediate(function () {
       callback(null, key, value)
