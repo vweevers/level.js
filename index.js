@@ -159,15 +159,16 @@ Level.destroy = function (db, callback) {
   }
 }
 
-var checkKeyValue = Level.prototype._checkKeyValue = function (obj, type) {
-  if (obj === null || obj === undefined)
+AbstractLevelDOWN.prototype._checkKey = function (obj, type) {
+  if (obj === null || obj === undefined) {
     return new Error(type + ' cannot be `null` or `undefined`')
-  if (obj === null || obj === undefined)
-    return new Error(type + ' cannot be `null` or `undefined`')
-  if (isBuffer(obj) && obj.byteLength === 0)
-    return new Error(type + ' cannot be an empty ArrayBuffer')
-  if (String(obj) === '')
+  } else if (this._isBuffer(obj)) {
+    if (obj.length === 0) return new Error(type + ' cannot be an empty Buffer')
+  } else if (obj instanceof ArrayBuffer) {
+    if (obj.byteLength === 0) return new Error(type + ' cannot be an empty ArrayBuffer')
+  } else if (isTyped(obj)) {
+    if (obj.byteLength === 0) return new Error(type + ' cannot be an empty TypedArray')
+  } else if (obj.length === 0) {
     return new Error(type + ' cannot be an empty String')
-  if (obj.length === 0)
-    return new Error(type + ' cannot be an empty Array')
+  }
 }
