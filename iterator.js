@@ -1,12 +1,9 @@
-// Wish it was a CommonJS ponyfill
-require('setimmediate')
+'use strict';
 
 var util = require('util')
-var AbstractIterator  = require('abstract-leveldown').AbstractIterator
-var ltgt = require('ltgt')
-var toBuffer = require('./util').toBuffer
-
-module.exports = Iterator
+  , AbstractIterator  = require('abstract-leveldown').AbstractIterator
+  , ltgt = require('ltgt')
+  , toBuffer = require('./util').toBuffer
 
 function Iterator (db, options) {
   this._callback = null
@@ -44,8 +41,9 @@ function Iterator (db, options) {
 }
 
 util.inherits(Iterator, AbstractIterator)
+module.exports = Iterator
 
-Iterator.prototype._openTransaction = function() {
+Iterator.prototype._openTransaction = function () {
   var self = this
 
   self.transaction = self.db.iterate(function () {
@@ -55,9 +53,9 @@ Iterator.prototype._openTransaction = function() {
     autoContinue: true,
     order: self._order,
     limit: self._limit && self._limit > 0 ? self._limit : Infinity,
-    onError: function(event) {
+    onError: function (event) {
       if (event) {
-        var err = new Error(''+self.transaction.error)
+        var err = new Error('' + self.transaction.error)
         var callback = self._callback
 
         self._callback = null

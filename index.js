@@ -1,24 +1,32 @@
 'use strict';
 
-module.exports = Level
+require('setimmediate')
 
 var IDB = require('idb-wrapper')
-var AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
-var util = require('util')
-var isTyped = require('is-typedarray').strict
-var xtend = require('xtend')
-var toBuffer = require('./util').toBuffer
-var Iterator = require('./iterator')
+  , AbstractLevelDOWN = require('abstract-leveldown').AbstractLevelDOWN
+  , util = require('util')
+  , isTyped = require('is-typedarray').strict
+  , xtend = require('xtend')
+  , toBuffer = require('./util').toBuffer
+  , Iterator = require('./iterator')
 
-function Level(location) {
+function Level (location) {
   if (!(this instanceof Level)) return new Level(location)
-  if (!location) throw new Error("constructor requires at least a location argument")
-  if (typeof location !== 'string') throw new Error('constructor requires a location string argument')
-  this.IDBOptions = {}
+
+  if (!location) {
+    throw new Error('constructor requires at least a location argument')
+  }
+
+  if (typeof location !== 'string') {
+    throw new Error('constructor requires a location string argument')
+  }
+
+  this.idbOptions = {}
   this.location = location
 }
 
 util.inherits(Level, AbstractLevelDOWN)
+module.exports = Level
 
 Level.prototype._open = function(options, callback) {
   var self = this
@@ -36,7 +44,7 @@ Level.prototype._open = function(options, callback) {
   }
 
   xtend(idbOpts, options)
-  this.IDBOptions = idbOpts
+  this.idbOptions = idbOpts
   this.idb = new IDB(idbOpts)
 }
 
@@ -52,7 +60,7 @@ Level.prototype._get = function (key, options, callback) {
   }, callback)
 }
 
-Level.prototype._del = function(key, options, callback) {
+Level.prototype._del = function (key, options, callback) {
   this.idb.remove(key, callback, callback)
 }
 
@@ -109,7 +117,7 @@ Level.prototype._batch = function (ops, options, callback) {
     }
   }
 
-  return this.idb.batch(copies, function(){ callback() }, callback)
+  return this.idb.batch(copies, function () { callback() }, callback)
 }
 
 Level.prototype._close = function (callback) {
@@ -130,7 +138,7 @@ Level.destroy = function (db, options, callback) {
   else if (!options) options = {}
 
   if (typeof db === 'object') {
-    var prefix = (db.IDBOptions && db.IDBOptions.storePrefix) || 'IDBWrapper-'
+    var prefix = (db.idbOptions && db.idbOptions.storePrefix) || 'IDBWrapper-'
     var dbname = db.location
   } else {
     var prefix = 'IDBWrapper-'
@@ -144,15 +152,15 @@ Level.destroy = function (db, options, callback) {
     if (!called++) callback(err)
   }
 
-  request.onsuccess = function() {
+  request.onsuccess = function () {
     cb()
   }
 
-  request.onerror = function(err) {
+  request.onerror = function (err) {
     cb(err)
   }
 
-  request.onblocked = function() {
+  request.onblocked = function () {
     // Wait a max amount of time
     if (options.wait !== undefined) {
       setTimeout(function() {
