@@ -13,16 +13,8 @@ var IDB = require('idb-wrapper')
 function Level (location) {
   if (!(this instanceof Level)) return new Level(location)
 
-  if (!location) {
-    throw new Error('constructor requires at least a location argument')
-  }
-
-  if (typeof location !== 'string') {
-    throw new Error('constructor requires a location string argument')
-  }
-
   this.idbOptions = {}
-  this.location = location
+  AbstractLevelDOWN.call(this, location)
 }
 
 util.inherits(Level, AbstractLevelDOWN)
